@@ -1,0 +1,19 @@
+{
+  "database": {
+    "mongodb_uri": "mongodb+srv://sgkganesh1802_db_user:nlv4VxnLEaKf3kcd@cluster0.losirgw.mongodb.net/"
+  },
+  "auth": {
+    "jwt_secret": "super_secret_slipper_jwt_key_2026_production_grade_secured",
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  },
+  "app": {
+    "business_name": "SoleTrack Slipper Business",
+    "currency_symbol": "₹"
+  },
+  "cloudinary": {
+    "cloud_name": "mbu3snxe",
+    "api_key": "982822349585428",
+    "api_secret": "yZjwP_fYy7uhLHmnnxYlBORhdH4"
+  }
+}

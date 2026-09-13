@@ -1,49 +1,385 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap');
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  color-scheme: light;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+  /* Crisp Light Theme Palette */
+  --bg-main: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-input: #ffffff;
+  --bg-subtle: #f1f5f9;
 
-html {
-  height: 100%;
-}
+  /* Borders & Dividers */
+  --border-subtle: #e2e8f0;
+  --border-light: #cbd5e1;
+  --border-focus: #0284c7;
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
+  /* High-Contrast Dark Slate Typography */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
 
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Accents */
+  --brand-cyan: #0284c7;
+  --brand-cyan-light: #e0f2fe;
+  --brand-cyan-text: #0369a1;
+
+  --profit-emerald: #059669;
+  --profit-emerald-light: #d1fae5;
+  --profit-emerald-text: #047857;
+
+  --sale-indigo: #4f46e5;
+  --sale-indigo-light: #ede9fe;
+  --sale-indigo-text: #4338ca;
+
+  --purchase-amber: #d97706;
+  --purchase-amber-light: #fef3c7;
+  --purchase-amber-text: #b45309;
+
+  --danger-rose: #e11d48;
+  --danger-rose-light: #ffe4e6;
+  --danger-rose-text: #be123c;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
+
+  /* Layout */
+  --sidebar-width: 210px;
+  --header-height: 50px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Outfit', var(--font-family);
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
   margin: 0;
+  padding: 0;
 }
 
-a {
+html, body {
+  min-height: 100%;
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  font-family: var(--font-family);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide Next.js dev indicator button that overlaps bottom-left sidebar */
+[data-nextjs-dev-tools-button], [data-nextjs-route-announcer], #nextjs-dev-overlay {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Typography Defaults */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #0f172a !important;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+p, span, label, td, th, div {
   color: inherit;
-  text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+/* Enforce Single Line Utility */
+.single-line, .text-nowrap {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Cards */
+.glass-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease-in-out;
+}
+
+.glass-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+}
+
+/* Layout */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+  background-color: #f8fafc;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-left: var(--sidebar-width);
+  padding: 14px 18px 40px 18px;
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    margin-left: 0;
+    padding: 12px 12px 60px 12px;
   }
 }
+
+/* Compact Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-family: var(--font-family);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.btn-primary {
+  background-color: var(--brand-cyan) !important;
+  color: #ffffff !important;
+  border-color: var(--brand-cyan);
+}
+.btn-primary:hover {
+  background-color: #0369a1 !important;
+}
+
+.btn-emerald {
+  background-color: var(--profit-emerald) !important;
+  color: #ffffff !important;
+  border-color: var(--profit-emerald);
+}
+.btn-emerald:hover {
+  background-color: #047857 !important;
+}
+
+.btn-amber {
+  background-color: var(--purchase-amber) !important;
+  color: #ffffff !important;
+  border-color: var(--purchase-amber);
+}
+.btn-amber:hover {
+  background-color: #b45309 !important;
+}
+
+.btn-secondary {
+  background-color: #ffffff !important;
+  color: #334155 !important;
+  border: 1px solid var(--border-subtle);
+}
+.btn-secondary:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: var(--border-light);
+}
+
+.btn-danger {
+  background-color: var(--danger-rose-light) !important;
+  color: var(--danger-rose-text) !important;
+  border: 1px solid #fecdd3;
+}
+.btn-danger:hover {
+  background-color: #fecdd3 !important;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
+/* Form Elements */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.input-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155 !important;
+  white-space: nowrap;
+}
+
+.input-field {
+  width: 100%;
+  padding: 6px 9px;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: #0f172a !important;
+  font-family: var(--font-family);
+  font-size: 0.825rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input-field:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.input-field::placeholder {
+  color: #94a3b8;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.badge-cyan {
+  background-color: var(--brand-cyan-light);
+  color: var(--brand-cyan-text) !important;
+  border: 1px solid #bae6fd;
+}
+
+.badge-emerald {
+  background-color: var(--profit-emerald-light);
+  color: var(--profit-emerald-text) !important;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-amber {
+  background-color: var(--purchase-amber-light);
+  color: var(--purchase-amber-text) !important;
+  border: 1px solid #fde68a;
+}
+
+.badge-indigo {
+  background-color: var(--sale-indigo-light);
+  color: var(--sale-indigo-text) !important;
+  border: 1px solid #ddd6fe;
+}
+
+/* Tables */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: #ffffff;
+  box-shadow: var(--shadow-xs);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+.data-table th {
+  background: #f8fafc;
+  padding: 7px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #475569 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #0f172a !important;
+  white-space: nowrap;
+}
+
+.data-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+/* Hide Next.js dev badge so it doesn't overlap the sidebar footer */
+nextjs-portal {
+  display: none !important;
+}
+
+/* Ensure Modals and Popups always appear on top of all page elements (Maximum CSS 32-bit Integer) */
+.modal-overlay {
+  z-index: 2147483646 !important;
+}
+
+.modal-container {
+  z-index: 2147483647 !important;
+}
+
+/* Remove default browser spinner arrows from numeric quantity inputs */
+.no-spin::-webkit-inner-spin-button,
+.no-spin::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spin {
+  -moz-appearance: textfield;
+}
+
+
+
