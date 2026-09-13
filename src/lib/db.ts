@@ -6,76 +6,104 @@ import { getTodayDateString, getPastDateString } from "./sampleData";
 
 import { getAppConfig } from "./config";
 
+import os from "os";
+
 interface LocalStore {
   purchases: IPurchase[];
   sales: ISale[];
 }
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// In Vercel / serverless environments, only /tmp is writable; /var/task is read-only.
+const DATA_DIR =
+  process.env.VERCEL || (process.env.NODE_ENV === "production" && process.platform !== "win32")
+    ? path.join(os.tmpdir(), "slipper_data")
+    : path.join(process.cwd(), "data");
 const STORE_FILE = path.join(DATA_DIR, "slipper_store.json");
 
 let isMongoConnected = false;
+let mongoConnectPromise: Promise<boolean> | null = null;
 
 // Attempt MongoDB Connection
 export async function connectMongo(): Promise<boolean> {
-  if (isMongoConnected && mongoose.connection.readyState >= 1) return true;
-  const cfg = getAppConfig();
-  const uri = cfg.database.mongodb_uri?.trim() || "";
-
-  if (!uri || uri.includes("<username>")) {
-    return false;
-  }
-
-  try {
-    // Fix Windows DNS SRV lookup issues for MongoDB Atlas
-    try {
-      const dns = await import("dns");
-      dns.setServers(["8.8.8.8", "1.1.1.1"]);
-    } catch {
-      // ignore
-    }
-
-    if (mongoose.connection.readyState >= 1) {
-      isMongoConnected = true;
-      return true;
-    }
-
-    await mongoose.connect(uri, {
-      dbName: "slipper_inventory",
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 8000,
-    });
+  if (mongoose.connection.readyState === 1) {
     isMongoConnected = true;
-    console.log("Successfully connected to MongoDB Cloud Atlas (slipper_inventory)");
+    return true;
+  }
 
-    // Auto-seed admin user into MongoDB Atlas 'users' collection if empty
-    try {
-      const { UserModel } = await import("@/models/schemas");
-      const userCount = await UserModel.countDocuments();
-      if (userCount === 0) {
-        const bcrypt = await import("bcryptjs");
-        const adminUser = (cfg.auth.admin_username || "admin").toLowerCase().trim();
-        const adminPass = cfg.auth.admin_password || "admin123";
-        const passwordHash = await bcrypt.hash(adminPass, 10);
+  if (mongoConnectPromise) {
+    return mongoConnectPromise;
+  }
 
-        await UserModel.create({
-          username: adminUser,
-          passwordHash,
-          name: `${cfg.app.business_name} Admin`,
-          role: "admin",
-        });
-        console.log("Seeded admin user into MongoDB Atlas 'users' collection");
-      }
-    } catch (seedErr) {
-      console.warn("Error ensuring admin user in MongoDB Atlas:", seedErr);
+  mongoConnectPromise = (async () => {
+    const cfg = getAppConfig();
+    const uri = cfg.database?.mongodb_uri?.trim() || "";
+
+    if (!uri || uri.includes("<username>")) {
+      console.warn("MongoDB URI is empty or not configured in config/env");
+      return false;
     }
 
-    return true;
-  } catch (error) {
-    console.warn("MongoDB Cloud connection failed, using local persistent fallback store:", error);
-    isMongoConnected = false;
-    return false;
-  }
+    try {
+      // Fix Windows DNS SRV lookup issues for MongoDB Atlas ONLY on Windows.
+      // Do NOT run on Linux/Vercel (AWS Lambda blocks outbound UDP port 53 to custom DNS).
+      if (process.platform === "win32") {
+        try {
+          const dns = await import("dns");
+          dns.setServers(["8.8.8.8", "1.1.1.1"]);
+        } catch {
+          // ignore
+        }
+      }
+
+      if (mongoose.connection.readyState === 1) {
+        isMongoConnected = true;
+        return true;
+      }
+
+      await mongoose.connect(uri, {
+        dbName: "slipper_inventory",
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 10000,
+      });
+      isMongoConnected = true;
+      console.log("Successfully connected to MongoDB Cloud Atlas (slipper_inventory)");
+
+      // Auto-seed admin user into MongoDB Atlas 'users' collection if empty
+      try {
+        const { UserModel } = await import("@/models/schemas");
+        const userCount = await UserModel.countDocuments();
+        if (userCount === 0) {
+          const bcrypt = await import("bcryptjs");
+          const adminUser = (cfg.auth.admin_username || "admin").toLowerCase().trim();
+          const adminPass = cfg.auth.admin_password || "admin123";
+          const passwordHash = await bcrypt.hash(adminPass, 10);
+
+          await UserModel.create({
+            username: adminUser,
+            passwordHash,
+            name: `${cfg.app.business_name} Admin`,
+            role: "admin",
+          });
+          console.log("Seeded admin user into MongoDB Atlas 'users' collection");
+        }
+      } catch (seedErr) {
+        console.warn("Error ensuring admin user in MongoDB Atlas:", seedErr);
+      }
+
+      return true;
+    } catch (error) {
+      console.error(
+        "MongoDB Cloud connection failed. If on Vercel, ensure MongoDB Atlas Network Access has 0.0.0.0/0 allowed:",
+        error
+      );
+      isMongoConnected = false;
+      return false;
+    } finally {
+      mongoConnectPromise = null;
+    }
+  })();
+
+  return mongoConnectPromise;
 }
 
 // Local Persistent Store fallback (clean empty store)
