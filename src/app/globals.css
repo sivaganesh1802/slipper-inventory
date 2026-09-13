@@ -165,6 +165,38 @@ p, span, label, td, th, div {
   }
 }
 
+/* Purchases & KPI Responsive Ribbon */
+.purchases-kpi-ribbon {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .purchases-kpi-ribbon {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .purchases-kpi-ribbon .btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .filter-bar-responsive {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .filter-bar-responsive > div {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .filter-bar-responsive select {
+    width: 100% !important;
+  }
+}
+
 /* Compact Buttons */
 .btn {
   display: inline-flex;

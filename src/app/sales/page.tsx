@@ -337,7 +337,7 @@ export default function SalesPage() {
           style={{ flexShrink: 0, whiteSpace: "nowrap" }}
         >
           <Plus size={15} />
-          <span>+ Record Sale</span>
+          <span>Record Sale</span>
         </button>
 
         <div style={{ flex: "1 1 160px", position: "relative", minWidth: "130px" }}>

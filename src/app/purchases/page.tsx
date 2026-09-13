@@ -309,22 +309,14 @@ export default function PurchasesPage() {
       />
 
       {/* KPI Ribbon */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr auto",
-          gap: "10px",
-          marginBottom: "12px",
-          alignItems: "center",
-        }}
-      >
+      <div className="purchases-kpi-ribbon">
         <div
           className="kpi-card"
           style={{
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            padding: "6px 12px",
+            padding: "8px 12px",
             minHeight: "44px",
           }}
         >
@@ -362,7 +354,7 @@ export default function PurchasesPage() {
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            padding: "6px 12px",
+            padding: "8px 12px",
             minHeight: "44px",
           }}
         >
@@ -397,16 +389,16 @@ export default function PurchasesPage() {
         <button
           onClick={handleOpenAddModal}
           className="btn btn-primary"
-          style={{ padding: "8px 16px", fontSize: "0.8rem", whiteSpace: "nowrap", height: "44px" }}
+          style={{ padding: "8px 16px", fontSize: "0.82rem", whiteSpace: "nowrap", height: "44px", fontWeight: 700 }}
         >
-          <Plus size={15} />
-          <span>+ Add Slipper Stock</span>
+          <Plus size={16} />
+          <span>Add Slipper Stock</span>
         </button>
       </div>
 
       {/* Filter and Search Bar */}
       <div
-        className="glass-card"
+        className="glass-card filter-bar-responsive"
         style={{
           padding: "7px 12px",
           marginBottom: "12px",
