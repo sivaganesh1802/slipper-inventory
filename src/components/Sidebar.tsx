@@ -48,6 +48,7 @@ export function Sidebar() {
 
   return (
     <aside
+      className="sidebar-desktop"
       style={{
         position: "fixed",
         top: 0,

@@ -153,9 +153,15 @@ p, span, label, td, th, div {
 }
 
 @media (max-width: 900px) {
+  .sidebar-desktop {
+    display: none !important;
+  }
+  .mobile-bar {
+    display: flex !important;
+  }
   .main-content {
-    margin-left: 0;
-    padding: 12px 12px 60px 12px;
+    margin-left: 0 !important;
+    padding: 10px 12px 60px 12px;
   }
 }
 
