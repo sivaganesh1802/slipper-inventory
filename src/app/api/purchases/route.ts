@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { artNo, size, purchaseDate, purchaseValue, quantity, sizes, image, notes } = body;
+    const { artNo, size, purchaseDate, purchaseValue, sellingPrice, quantity, sizes, image, notes } = body;
 
     // Validate fields requested by user
     if (!artNo || !artNo.trim()) {
@@ -43,6 +43,11 @@ export async function POST(req: NextRequest) {
     if (purchaseValue === undefined || purchaseValue === null || Number(purchaseValue) < 0) {
       return NextResponse.json({ success: false, error: "Valid Purchase Cost is required" }, { status: 400 });
     }
+
+    const parsedSellingPrice =
+      sellingPrice !== undefined && sellingPrice !== null && sellingPrice !== ""
+        ? Number(sellingPrice)
+        : 0;
 
     // Multi-size batch creation
     if (Array.isArray(sizes) && sizes.length > 0) {
@@ -65,6 +70,7 @@ export async function POST(req: NextRequest) {
           size: String(item.size).trim(),
           purchaseDate,
           purchaseValue: Number(purchaseValue),
+          sellingPrice: parsedSellingPrice,
           quantity: itemQty,
           image: image || "",
           notes: notes || "",
@@ -88,6 +94,7 @@ export async function POST(req: NextRequest) {
       size: size.trim(),
       purchaseDate,
       purchaseValue: Number(purchaseValue),
+      sellingPrice: parsedSellingPrice,
       quantity: Number(quantity) || 1,
       image: image || "",
       notes: notes || "",

@@ -4,6 +4,7 @@ export interface IPurchase {
   size: string;
   purchaseDate: string; // YYYY-MM-DD
   purchaseValue: number; // cost per pair
+  sellingPrice?: number; // default retail/selling price per pair
   quantity: number; // initial quantity
   remainingStock: number; // currently available pairs
   image?: string; // base64 or URL

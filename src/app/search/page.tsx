@@ -257,10 +257,10 @@ export default function SearchPage() {
 
                     <div>
                       <div style={{ fontSize: "0.65rem", color: "#64748b", textTransform: "uppercase" }}>
-                        Selling
+                        Selling {p.defaultSellingPrice ? "(Default)" : ""}
                       </div>
                       <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0284c7" }}>
-                        ₹{p.latestSalesValue}
+                        ₹{p.defaultSellingPrice || p.latestSalesValue}
                       </div>
                     </div>
 

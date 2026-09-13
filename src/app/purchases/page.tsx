@@ -44,6 +44,7 @@ export default function PurchasesPage() {
   const [size, setSize] = useState(""); // For single edit mode
   const [purchaseDate, setPurchaseDate] = useState(getTodayDateString());
   const [purchaseValue, setPurchaseValue] = useState<string>("");
+  const [sellingPrice, setSellingPrice] = useState<string>("");
   const [quantity, setQuantity] = useState<string>(""); // For single edit mode
   const [remainingStock, setRemainingStock] = useState<string>(""); // For edit mode
   const [image, setImage] = useState("");
@@ -86,6 +87,7 @@ export default function PurchasesPage() {
     setIsSizeDropdownOpen(false);
     setPurchaseDate(getTodayDateString());
     setPurchaseValue("");
+    setSellingPrice("");
     setQuantity("");
     setRemainingStock("");
     setImage("");
@@ -101,6 +103,7 @@ export default function PurchasesPage() {
     setSize(p.size);
     setPurchaseDate(p.purchaseDate);
     setPurchaseValue(String(p.purchaseValue));
+    setSellingPrice(p.sellingPrice ? String(p.sellingPrice) : "");
     setQuantity(String(p.quantity));
     setRemainingStock(String(p.remainingStock ?? p.quantity));
     setImage(p.image || "");
@@ -220,6 +223,7 @@ export default function PurchasesPage() {
             size: size.trim(),
             purchaseDate,
             purchaseValue: val,
+            sellingPrice: sellingPrice ? Number(sellingPrice) : 0,
             quantity: qty,
             remainingStock: isNaN(rem) ? qty : rem,
             image,
@@ -256,6 +260,7 @@ export default function PurchasesPage() {
             artNo: artNo.toUpperCase().trim(),
             purchaseDate,
             purchaseValue: val,
+            sellingPrice: sellingPrice ? Number(sellingPrice) : 0,
             sizes: sizesPayload,
             image,
             notes,
@@ -474,6 +479,7 @@ export default function PurchasesPage() {
               <th>Size</th>
               <th>Purchase Date</th>
               <th>Cost Price</th>
+              <th>Selling Price</th>
               <th>Purchased Qty</th>
               <th>Remaining Stock</th>
               <th>Stock Value</th>
@@ -483,13 +489,13 @@ export default function PurchasesPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} style={{ textAlign: "center", padding: "24px", color: "#475569", fontWeight: 600 }}>
+                <td colSpan={10} style={{ textAlign: "center", padding: "24px", color: "#475569", fontWeight: 600 }}>
                   Loading stock from database...
                 </td>
               </tr>
             ) : purchases.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ textAlign: "center", padding: "24px", color: "#475569", fontWeight: 600 }}>
+                <td colSpan={10} style={{ textAlign: "center", padding: "24px", color: "#475569", fontWeight: 600 }}>
                   No purchases found. Click &quot;+ Add Slipper Stock&quot; to begin!
                 </td>
               </tr>
@@ -561,6 +567,35 @@ export default function PurchasesPage() {
 
                     <td style={{ fontWeight: 700, color: "#0f172a" }}>
                       ₹{p.purchaseValue.toLocaleString()}
+                    </td>
+
+                    <td>
+                      {p.sellingPrice && p.sellingPrice > 0 ? (
+                        <div>
+                          <span style={{ fontWeight: 800, color: "#0284c7" }}>
+                            ₹{p.sellingPrice.toLocaleString()}
+                          </span>
+                          {p.sellingPrice > p.purchaseValue && (
+                            <span
+                              style={{
+                                display: "inline-block",
+                                marginLeft: "4px",
+                                fontSize: "0.65rem",
+                                color: "#166534",
+                                background: "#dcfce7",
+                                padding: "1px 4px",
+                                borderRadius: "3px",
+                                fontWeight: 700,
+                              }}
+                              title={`Target Margin: ₹${(p.sellingPrice - p.purchaseValue).toFixed(0)}/pair`}
+                            >
+                              +₹{(p.sellingPrice - p.purchaseValue).toFixed(0)}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>—</span>
+                      )}
                     </td>
 
                     <td style={{ color: "#0f172a", fontWeight: 600 }}>{p.quantity} pairs</td>
@@ -689,10 +724,10 @@ export default function PurchasesPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: editingPurchase ? "1fr 1fr 1fr" : "1fr 1fr", gap: "10px" }}>
             <div className="input-group">
               <label className="input-label" htmlFor="purchaseValue">
-                Purchase Cost per Pair (₹) *
+                Purchase Cost (₹) *
               </label>
               <input
                 id="purchaseValue"
@@ -702,6 +737,22 @@ export default function PurchasesPage() {
                 placeholder="e.g. 150"
                 value={purchaseValue}
                 onChange={(e) => setPurchaseValue(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="input-group">
+              <label className="input-label" htmlFor="sellingPrice">
+                Default Selling Price (₹) *
+              </label>
+              <input
+                id="sellingPrice"
+                type="number"
+                step="any"
+                className="input-field"
+                placeholder="e.g. 250"
+                value={sellingPrice}
+                onChange={(e) => setSellingPrice(e.target.value)}
                 required
               />
             </div>
@@ -722,6 +773,33 @@ export default function PurchasesPage() {
               </div>
             )}
           </div>
+
+          {/* Target Profit preview badge */}
+          {purchaseValue && sellingPrice && Number(sellingPrice) > Number(purchaseValue) && (
+            <div
+              style={{
+                marginTop: "-4px",
+                marginBottom: "12px",
+                padding: "6px 10px",
+                borderRadius: "4px",
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                color: "#166534",
+                fontSize: "0.74rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>
+                💡 Target Profit: <strong>₹{(Number(sellingPrice) - Number(purchaseValue)).toFixed(2)}</strong> / pair
+              </span>
+              <span style={{ fontWeight: 800 }}>
+                +{(((Number(sellingPrice) - Number(purchaseValue)) / Number(purchaseValue)) * 100).toFixed(1)}% Markup
+              </span>
+            </div>
+          )}
 
           {/* EDIT MODE: Single Record Quantity and Remaining Stock */}
           {editingPurchase ? (

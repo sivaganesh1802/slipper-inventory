@@ -8,6 +8,7 @@ const PurchaseSchema = new Schema<IPurchase>(
     size: { type: String, required: true, trim: true },
     purchaseDate: { type: String, required: true },
     purchaseValue: { type: Number, required: true, min: 0 },
+    sellingPrice: { type: Number, default: 0, min: 0 },
     quantity: { type: Number, required: true, min: 0 },
     remainingStock: { type: Number, required: true, min: 0 },
     image: { type: String, default: "" },

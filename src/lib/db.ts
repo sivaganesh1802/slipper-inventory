@@ -164,6 +164,7 @@ export async function createPurchase(data: {
   size: string;
   purchaseDate: string;
   purchaseValue: number;
+  sellingPrice?: number;
   quantity: number;
   image?: string;
   notes?: string;
@@ -171,6 +172,7 @@ export async function createPurchase(data: {
   const isCloud = await connectMongo();
   const quantity = Number(data.quantity) || 1;
   const purchaseValue = Number(data.purchaseValue) || 0;
+  const sellingPrice = data.sellingPrice !== undefined ? Number(data.sellingPrice) : 0;
 
   if (isCloud) {
     const { PurchaseModel } = await import("@/models/schemas");
@@ -179,6 +181,7 @@ export async function createPurchase(data: {
       size: data.size.trim(),
       purchaseDate: data.purchaseDate,
       purchaseValue,
+      sellingPrice,
       quantity,
       remainingStock: quantity,
       image: data.image || "",
@@ -198,6 +201,7 @@ export async function createPurchase(data: {
     size: data.size.trim(),
     purchaseDate: data.purchaseDate,
     purchaseValue,
+    sellingPrice,
     quantity,
     remainingStock: quantity,
     image: data.image || "",
@@ -219,6 +223,7 @@ export async function updatePurchase(
   if (data.artNo) updateData.artNo = data.artNo.toUpperCase().trim();
   if (data.size) updateData.size = String(data.size).trim();
   if (data.purchaseValue !== undefined) updateData.purchaseValue = Number(data.purchaseValue);
+  if (data.sellingPrice !== undefined) updateData.sellingPrice = Number(data.sellingPrice);
   if (data.quantity !== undefined) {
     updateData.quantity = Number(data.quantity);
     if (data.remainingStock === undefined) {
@@ -418,6 +423,7 @@ export interface IProductSearchResult {
   sizes: string[];
   latestPurchaseValue: number;
   latestSalesValue: number;
+  defaultSellingPrice?: number;
   avgProfitMargin: number;
   totalPurchased: number;
   totalSold: number;
@@ -460,15 +466,20 @@ export async function searchProducts(query: string): Promise<IProductSearchResul
     const sizes = Array.from(new Set(data.purchases.map((p) => p.size)));
     const image = data.purchases.find((p) => p.image)?.image || "";
     const latestPurchaseValue = data.purchases[0]?.purchaseValue || 0;
-    const latestSalesValue = data.sales[0]?.salesValue || Math.round(latestPurchaseValue * 1.5);
+    const defaultSellingPrice =
+      data.purchases.find((p) => p.sellingPrice && p.sellingPrice > 0)?.sellingPrice || 0;
+    const latestSalesValue =
+      data.sales[0]?.salesValue || defaultSellingPrice || Math.round(latestPurchaseValue * 1.5);
+
+    const targetPrice = defaultSellingPrice > 0 ? defaultSellingPrice : latestSalesValue;
+    const margin =
+      targetPrice > 0
+        ? Math.round(((targetPrice - latestPurchaseValue) / targetPrice) * 100)
+        : 0;
 
     const totalPurchased = data.purchases.reduce((acc, p) => acc + p.quantity, 0);
     const totalSold = data.sales.reduce((acc, s) => acc + s.quantity, 0);
     const totalRemainingStock = data.purchases.reduce((acc, p) => acc + (p.remainingStock ?? 0), 0);
-
-    const margin = latestSalesValue > 0
-      ? Math.round(((latestSalesValue - latestPurchaseValue) / latestSalesValue) * 100)
-      : 0;
 
     results.push({
       artNo,
@@ -476,6 +487,7 @@ export async function searchProducts(query: string): Promise<IProductSearchResul
       sizes,
       latestPurchaseValue,
       latestSalesValue,
+      defaultSellingPrice,
       avgProfitMargin: margin,
       totalPurchased,
       totalSold,

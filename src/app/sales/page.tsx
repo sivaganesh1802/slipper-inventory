@@ -82,6 +82,8 @@ export default function SalesPage() {
   const estimatedProfit = (numSalesVal - purchaseCost) * numQty;
   const marginPercent = numSalesVal > 0 ? Math.round(((numSalesVal - purchaseCost) / numSalesVal) * 100) : 0;
 
+  const defaultSellingPrice = currentPurchase?.sellingPrice || 0;
+
   const handleOpenAddModal = () => {
     setArtNo("");
     setSize("");
@@ -96,12 +98,24 @@ export default function SalesPage() {
 
   const handleArtNoSelect = (newArt: string) => {
     setArtNo(newArt);
-    const match = purchases.find((p) => p.artNo.toUpperCase() === newArt.toUpperCase() && p.remainingStock > 0);
+    const match =
+      purchases.find((p) => p.artNo.toUpperCase() === newArt.toUpperCase() && p.remainingStock > 0) ||
+      purchases.find((p) => p.artNo.toUpperCase() === newArt.toUpperCase());
     if (match) {
       setSize(match.size);
-      if (!salesValue) {
-        setSalesValue(String(Math.round(match.purchaseValue * 1.6)));
+      if (match.sellingPrice && match.sellingPrice > 0) {
+        setSalesValue(String(match.sellingPrice));
+      } else if (match.purchaseValue) {
+        setSalesValue(String(Math.round(match.purchaseValue * 1.5)));
       }
+    }
+  };
+
+  const handleSizeChange = (newSize: string) => {
+    setSize(newSize);
+    const match = purchases.find((p) => p.artNo.toUpperCase() === artNo.toUpperCase() && p.size === newSize);
+    if (match && match.sellingPrice && match.sellingPrice > 0) {
+      setSalesValue(String(match.sellingPrice));
     }
   };
 
@@ -562,7 +576,7 @@ export default function SalesPage() {
                   id="saleSize"
                   className="input-field"
                   value={size}
-                  onChange={(e) => setSize(e.target.value)}
+                  onChange={(e) => handleSizeChange(e.target.value)}
                 >
                   {availableSizes.map((s, i) => (
                     <option key={i} value={s.size}>
@@ -577,7 +591,7 @@ export default function SalesPage() {
                   className="input-field"
                   placeholder="8"
                   value={size}
-                  onChange={(e) => setSize(e.target.value)}
+                  onChange={(e) => handleSizeChange(e.target.value)}
                   required
                 />
               )}
@@ -600,19 +614,55 @@ export default function SalesPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <div className="input-group">
-              <label className="input-label" htmlFor="salesValue">
-                Selling Price (₹) *
-              </label>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "3px" }}>
+                <label className="input-label" htmlFor="salesValue" style={{ marginBottom: 0 }}>
+                  Selling Price (₹) *
+                </label>
+                {defaultSellingPrice > 0 && (
+                  <span
+                    style={{
+                      fontSize: "0.68rem",
+                      color: "#0284c7",
+                      background: "#e0f2fe",
+                      padding: "1px 5px",
+                      borderRadius: "3px",
+                      fontWeight: 700,
+                    }}
+                    title="Pre-filled from Purchase. Editable for customer negotiations."
+                  >
+                    Default: ₹{defaultSellingPrice} (Editable)
+                  </span>
+                )}
+              </div>
               <input
                 id="salesValue"
                 type="number"
                 step="any"
                 className="input-field"
-                placeholder="299"
+                placeholder={defaultSellingPrice ? String(defaultSellingPrice) : "299"}
                 value={salesValue}
                 onChange={(e) => setSalesValue(e.target.value)}
                 required
               />
+              {defaultSellingPrice > 0 && numSalesVal > 0 && numSalesVal !== defaultSellingPrice && (
+                <div
+                  style={{
+                    fontSize: "0.68rem",
+                    color: numSalesVal < defaultSellingPrice ? "#b45309" : "#15803d",
+                    fontWeight: 600,
+                    marginTop: "3px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  {numSalesVal < defaultSellingPrice ? (
+                    <span>🤝 Negotiated: -₹{(defaultSellingPrice - numSalesVal).toFixed(0)}/pair off default</span>
+                  ) : (
+                    <span>📈 Premium: +₹{(numSalesVal - defaultSellingPrice).toFixed(0)}/pair over default</span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="input-group">
