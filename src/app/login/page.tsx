@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Footprints, Lock, User, ArrowRight, AlertCircle, ShieldCheck } from "lucide-react";
+import { Footprints, Lock, User, ArrowRight, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -26,11 +26,6 @@ export default function LoginPage() {
     if (!result.success) {
       setError(result.error || "Invalid username or password");
     }
-  };
-
-  const handleQuickDemo = () => {
-    setUsername("admin");
-    setPassword("admin123");
   };
 
   return (
@@ -192,36 +187,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* Quick Demo Credentials */}
-        <div
-          style={{
-            marginTop: "16px",
-            padding: "10px",
-            background: "#f8fafc",
-            borderRadius: "var(--radius-sm)",
-            border: "1px dashed #cbd5e1",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", marginBottom: "4px" }}>
-            <ShieldCheck size={14} style={{ color: "#0284c7" }} />
-            <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>
-              Quick Demo Access
-            </span>
-          </div>
-          <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "8px" }}>
-            <strong>admin</strong> / <strong>admin123</strong>
-          </p>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={handleQuickDemo}
-            style={{ width: "100%", fontSize: "0.74rem", padding: "4px 8px" }}
-          >
-            Auto-fill Credentials
-          </button>
-        </div>
       </div>
     </div>
   );
