@@ -35,12 +35,22 @@ export default function LoginPage() {
 
   return (
     <div
+      className="login-fullscreen"
       style={{
-        minHeight: "85vh",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: "100vw",
+        height: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        backgroundColor: "#f8fafc",
         padding: "16px",
+        zIndex: 9999,
+        overflowY: "auto",
       }}
     >
       <div
