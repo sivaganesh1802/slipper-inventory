@@ -271,7 +271,7 @@ export default function SearchPage() {
       : 0;
 
   return (
-    <div className="animate-fade-in search-page">
+    <div className="search-page">
       <Header
         title="Product & Price Finder"
         subtitle="Search slipper models by Art.No, customer, or size with live stock & quick sale entry"
@@ -304,15 +304,17 @@ export default function SearchPage() {
         </div>
       )}
 
-      {/* KPI Overview Strip */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "10px",
-          width: "100%",
-        }}
-      >
+      {/* Sticky Header Zone: KPI Metrics + Search Bar & Filters */}
+      <div className="search-sticky-zone">
+        {/* KPI Overview Strip */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "10px",
+            width: "100%",
+          }}
+        >
         <div
           className="glass-card"
           style={{
@@ -423,10 +425,10 @@ export default function SearchPage() {
       <div
         className="glass-card"
         style={{
-          padding: "16px 18px",
+          padding: "12px 16px",
           display: "flex",
           flexDirection: "column",
-          gap: "14px",
+          gap: "10px",
           width: "100%",
         }}
       >
@@ -645,6 +647,7 @@ export default function SearchPage() {
         <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
           Click &ldquo;Record Sale&rdquo; to process sales directly
         </span>
+      </div>
       </div>
 
       {/* Product Cards Grid - Auto filling 100% width with no right side gap */}
