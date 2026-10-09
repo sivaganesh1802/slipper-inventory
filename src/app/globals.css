@@ -492,3 +492,39 @@ header { margin-bottom:24px !important; }
 .login-fullscreen .btn-primary { background: #1e6b57 !important; border-color: #1e6b57 !important; border-radius: 10px; padding: 12px !important; }
 .login-fullscreen .btn-primary:hover { background: #174e40 !important; }
 @media (max-width: 520px) { .login-fullscreen > .glass-card { padding: 26px 20px !important; } }
+
+/* Keep navigation fixed while the workspace scrolls independently. */
+.app-container {
+  display: flex;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+}
+.editorial-sidebar {
+  position: sticky;
+  top: 0;
+  flex: 0 0 var(--sidebar-width);
+  height: 100dvh;
+  overflow: hidden;
+}
+.main-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100dvh;
+  overflow-y: auto;
+  padding: 20px 24px 40px;
+}
+.main-content > * {
+  max-width: 1180px;
+  margin-inline: auto;
+}
+header {
+  margin-bottom: 16px !important;
+}
+@media (max-width: 900px) {
+  .app-container { height: auto; min-height: 100dvh; overflow: visible; }
+  .main-content { height: auto; overflow: visible; padding: 14px 14px 40px; }
+}
+@media (max-width: 520px) {
+  .main-content { padding-inline: 12px; }
+}
