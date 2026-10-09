@@ -39,7 +39,7 @@ export default function SearchPage() {
   }, [query]);
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in search-page">
       <Header
         title="Product & Price Finder"
         subtitle="Search slipper models by Art.No to inspect purchase cost, selling price, and stock levels"
@@ -49,8 +49,8 @@ export default function SearchPage() {
       <div
         className="glass-card"
         style={{
-          padding: "14px 16px",
-          marginBottom: "16px",
+          padding: "12px 14px",
+          marginBottom: "10px",
         }}
       >
         <div style={{ position: "relative", marginBottom: "8px" }}>
@@ -144,8 +144,9 @@ export default function SearchPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: "14px",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gap: "10px",
+            alignItems: "stretch",
           }}
         >
           {products.map((p) => {
