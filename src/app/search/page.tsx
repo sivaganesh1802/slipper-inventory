@@ -39,7 +39,7 @@ export default function SearchPage() {
   }, [query]);
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in search-page">
       <Header
         title="Product & Price Finder"
         subtitle="Search slipper models by Art.No to inspect purchase cost, selling price, and stock levels"

@@ -535,3 +535,27 @@ header { margin-bottom:24px !important; }
 @media (max-width: 520px) {
   .main-content { padding-inline: 12px; }
 }
+
+/* Search workspace uses the full area beside the fixed navigation. */
+.search-page {
+  width: 100%;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.search-page > .glass-card,
+.search-page > div:not(.glass-card) {
+  width: 100%;
+  max-width: none !important;
+}
+
+.search-page > div[style*="grid"] {
+  width: 100%;
+  max-width: none !important;
+}
+
+@media (min-width: 901px) {
+  .main-content {
+    padding: 18px 20px 40px;
+  }
+}
