@@ -49,8 +49,8 @@ export default function SearchPage() {
       <div
         className="glass-card"
         style={{
-          padding: "14px 16px",
-          marginBottom: "16px",
+          padding: "12px 14px",
+          marginBottom: "10px",
         }}
       >
         <div style={{ position: "relative", marginBottom: "8px" }}>
@@ -144,8 +144,9 @@ export default function SearchPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: "14px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+            gap: "10px",
+            alignItems: "stretch",
           }}
         >
           {products.map((p) => {
