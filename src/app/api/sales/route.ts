@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import { getSales, createSale } from "@/lib/db";
+import { getSales, createSale, computePeriodSummaries } from "@/lib/db";
+import { ISalesFilter } from "@/lib/types";
 
-// GET /api/sales?artNo=...&customerName=...&date=...
+// GET /api/sales?artNo=...&customerName=...&date=...&startDate=...&endDate=...&month=...&year=...
 export async function GET(req: NextRequest) {
   const authCheck = await requireAuth(req);
   if (!authCheck.authenticated) {
@@ -14,9 +15,30 @@ export async function GET(req: NextRequest) {
     const artNo = searchParams.get("artNo") || undefined;
     const customerName = searchParams.get("customerName") || undefined;
     const date = searchParams.get("date") || undefined;
+    const startDate = searchParams.get("startDate") || undefined;
+    const endDate = searchParams.get("endDate") || undefined;
+    const month = searchParams.get("month") || undefined;
+    const year = searchParams.get("year") || undefined;
 
-    const sales = await getSales({ artNo, customerName, date });
-    return NextResponse.json({ success: true, sales });
+    const filter: ISalesFilter = {
+      artNo,
+      customerName,
+      date,
+      startDate,
+      endDate,
+      month,
+      year,
+    };
+
+    const sales = await getSales(filter);
+    const { monthly, yearly } = computePeriodSummaries(sales);
+
+    return NextResponse.json({
+      success: true,
+      sales,
+      monthlySummary: monthly,
+      yearlySummary: yearly,
+    });
   } catch (error) {
     console.error("Error fetching sales:", error);
     return NextResponse.json({ success: false, error: "Failed to fetch sales" }, { status: 500 });

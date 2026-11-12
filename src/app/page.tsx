@@ -285,6 +285,115 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Monthly & Annual Performance Ribbon */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "10px",
+          marginBottom: "12px",
+        }}
+      >
+        <div
+          className="glass-card"
+          style={{
+            padding: "8px 12px",
+            borderLeft: "3px solid #0284c7",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "#f0f9ff",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#0369a1", textTransform: "uppercase" }}>
+              This Month&apos;s Sales
+            </div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+              ₹{(data.thisMonth?.sales || 0).toLocaleString()}
+              <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600, marginLeft: "4px" }}>
+                ({data.thisMonth?.pairs || 0} pairs)
+              </span>
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "#059669", fontWeight: 700 }}>
+              Profit: +₹{(data.thisMonth?.profit || 0).toLocaleString()}
+            </div>
+          </div>
+          <Link
+            href="/sales"
+            className="btn btn-secondary btn-sm"
+            style={{ padding: "3px 7px", fontSize: "0.7rem", flexShrink: 0 }}
+          >
+            Monthly View
+          </Link>
+        </div>
+
+        <div
+          className="glass-card"
+          style={{
+            padding: "8px 12px",
+            borderLeft: "3px solid #059669",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "#f0fdf4",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#047857", textTransform: "uppercase" }}>
+              This Year&apos;s Sales
+            </div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+              ₹{(data.thisYear?.sales || 0).toLocaleString()}
+              <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 600, marginLeft: "4px" }}>
+                ({data.thisYear?.pairs || 0} pairs)
+              </span>
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "#059669", fontWeight: 700 }}>
+              Profit: +₹{(data.thisYear?.profit || 0).toLocaleString()}
+            </div>
+          </div>
+          <Link
+            href="/sales"
+            className="btn btn-secondary btn-sm"
+            style={{ padding: "3px 7px", fontSize: "0.7rem", flexShrink: 0 }}
+          >
+            Yearly View
+          </Link>
+        </div>
+
+        <div
+          className="glass-card"
+          style={{
+            padding: "8px 12px",
+            borderLeft: "3px solid #7c3aed",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "#faf5ff",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#6b21a8", textTransform: "uppercase" }}>
+              All-Time Performance
+            </div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+              ₹{data.totalSalesAllTime.toLocaleString()}
+            </div>
+            <div style={{ fontSize: "0.7rem", color: "#059669", fontWeight: 700 }}>
+              Net Profit: +₹{data.totalProfitAllTime.toLocaleString()}
+            </div>
+          </div>
+          <Link
+            href="/sales"
+            className="btn btn-secondary btn-sm"
+            style={{ padding: "3px 7px", fontSize: "0.7rem", flexShrink: 0 }}
+          >
+            View All
+          </Link>
+        </div>
+      </div>
+
       {/* Middle Grid: 7-Day Performance & Top Models */}
       <div
         style={{

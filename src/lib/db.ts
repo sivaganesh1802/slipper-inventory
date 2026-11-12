@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import fs from "fs/promises";
 import path from "path";
-import { IPurchase, ISale, IDashboardSummary } from "./types";
+import { IPurchase, ISale, IDashboardSummary, ISalesFilter, IPeriodSummary } from "./types";
 import { getTodayDateString, getPastDateString } from "./sampleData";
 
 import { getAppConfig } from "./config";
@@ -272,14 +272,28 @@ export async function deletePurchase(id: string): Promise<boolean> {
    SALES MANAGEMENT API
    ========================================================================== */
 
-export async function getSales(filter?: { artNo?: string; customerName?: string; date?: string }): Promise<ISale[]> {
+export async function getSales(filter?: ISalesFilter): Promise<ISale[]> {
   const isCloud = await connectMongo();
   if (isCloud) {
     const { SaleModel } = await import("@/models/schemas");
     const query: Record<string, unknown> = {};
     if (filter?.artNo) query.artNo = new RegExp(filter.artNo, "i");
     if (filter?.customerName) query.customerName = new RegExp(filter.customerName, "i");
-    if (filter?.date) query.salesDate = filter.date;
+
+    if (filter?.startDate && filter?.endDate) {
+      query.salesDate = { $gte: filter.startDate, $lte: filter.endDate };
+    } else if (filter?.startDate) {
+      query.salesDate = { $gte: filter.startDate };
+    } else if (filter?.endDate) {
+      query.salesDate = { $lte: filter.endDate };
+    } else if (filter?.date) {
+      query.salesDate = filter.date;
+    } else if (filter?.month) {
+      query.salesDate = { $regex: new RegExp(`^${filter.month}`) };
+    } else if (filter?.year) {
+      query.salesDate = { $regex: new RegExp(`^${filter.year}`) };
+    }
+
     const items = await SaleModel.find(query).sort({ salesDate: -1, createdAt: -1 }).lean();
     return items.map((doc) => ({
       ...doc,
@@ -298,10 +312,101 @@ export async function getSales(filter?: { artNo?: string; customerName?: string;
     const term = filter.customerName.toLowerCase();
     items = items.filter((s) => s.customerName.toLowerCase().includes(term));
   }
-  if (filter?.date) {
+
+  if (filter?.startDate && filter?.endDate) {
+    items = items.filter((s) => s.salesDate >= filter.startDate! && s.salesDate <= filter.endDate!);
+  } else if (filter?.startDate) {
+    items = items.filter((s) => s.salesDate >= filter.startDate!);
+  } else if (filter?.endDate) {
+    items = items.filter((s) => s.salesDate <= filter.endDate!);
+  } else if (filter?.date) {
     items = items.filter((s) => s.salesDate === filter.date);
+  } else if (filter?.month) {
+    items = items.filter((s) => s.salesDate.startsWith(filter.month!));
+  } else if (filter?.year) {
+    items = items.filter((s) => s.salesDate.startsWith(filter.year!));
   }
+
   return items.sort((a, b) => new Date(b.salesDate).getTime() - new Date(a.salesDate).getTime());
+}
+
+export function computePeriodSummaries(sales: ISale[]): {
+  monthly: IPeriodSummary[];
+  yearly: IPeriodSummary[];
+} {
+  const monthMap = new Map<
+    string,
+    { totalPairs: number; totalRevenue: number; totalCost: number; totalProfit: number; count: number }
+  >();
+  const yearMap = new Map<
+    string,
+    { totalPairs: number; totalRevenue: number; totalCost: number; totalProfit: number; count: number }
+  >();
+
+  for (const s of sales) {
+    if (!s.salesDate) continue;
+    const mKey = s.salesDate.slice(0, 7); // YYYY-MM
+    const yKey = s.salesDate.slice(0, 4); // YYYY
+    const pairs = Number(s.quantity) || 1;
+    const rev = (Number(s.salesValue) || 0) * pairs;
+    const cost = (Number(s.purchaseValue) || 0) * pairs;
+    const profit = Number(s.profit) || rev - cost;
+
+    const mData = monthMap.get(mKey) || { totalPairs: 0, totalRevenue: 0, totalCost: 0, totalProfit: 0, count: 0 };
+    mData.totalPairs += pairs;
+    mData.totalRevenue += rev;
+    mData.totalCost += cost;
+    mData.totalProfit += profit;
+    mData.count += 1;
+    monthMap.set(mKey, mData);
+
+    const yData = yearMap.get(yKey) || { totalPairs: 0, totalRevenue: 0, totalCost: 0, totalProfit: 0, count: 0 };
+    yData.totalPairs += pairs;
+    yData.totalRevenue += rev;
+    yData.totalCost += cost;
+    yData.totalProfit += profit;
+    yData.count += 1;
+    yearMap.set(yKey, yData);
+  }
+
+  const formatMonthLabel = (mKey: string) => {
+    try {
+      const [year, month] = mKey.split("-").map(Number);
+      if (!year || !month) return mKey;
+      const d = new Date(year, month - 1, 1);
+      return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    } catch {
+      return mKey;
+    }
+  };
+
+  const monthly: IPeriodSummary[] = Array.from(monthMap.entries())
+    .map(([period, data]) => ({
+      period,
+      label: formatMonthLabel(period),
+      totalPairs: data.totalPairs,
+      totalRevenue: data.totalRevenue,
+      totalCost: data.totalCost,
+      totalProfit: data.totalProfit,
+      profitMargin: data.totalRevenue > 0 ? Math.round((data.totalProfit / data.totalRevenue) * 100) : 0,
+      transactionCount: data.count,
+    }))
+    .sort((a, b) => b.period.localeCompare(a.period));
+
+  const yearly: IPeriodSummary[] = Array.from(yearMap.entries())
+    .map(([period, data]) => ({
+      period,
+      label: period,
+      totalPairs: data.totalPairs,
+      totalRevenue: data.totalRevenue,
+      totalCost: data.totalCost,
+      totalProfit: data.totalProfit,
+      profitMargin: data.totalRevenue > 0 ? Math.round((data.totalProfit / data.totalRevenue) * 100) : 0,
+      transactionCount: data.count,
+    }))
+    .sort((a, b) => b.period.localeCompare(a.period));
+
+  return { monthly, yearly };
 }
 
 export async function createSale(data: {
@@ -568,6 +673,24 @@ export async function getDashboardSummary(): Promise<IDashboardSummary> {
     });
   }
 
+  // Current month & year metrics
+  const currentMonthStr = todayStr.slice(0, 7);
+  const currentYearStr = todayStr.slice(0, 4);
+
+  const monthSales = sales.filter((s) => s.salesDate?.startsWith(currentMonthStr));
+  const thisMonth = {
+    pairs: monthSales.reduce((acc, s) => acc + s.quantity, 0),
+    sales: monthSales.reduce((acc, s) => acc + s.salesValue * s.quantity, 0),
+    profit: monthSales.reduce((acc, s) => acc + s.profit, 0),
+  };
+
+  const yearSales = sales.filter((s) => s.salesDate?.startsWith(currentYearStr));
+  const thisYear = {
+    pairs: yearSales.reduce((acc, s) => acc + s.quantity, 0),
+    sales: yearSales.reduce((acc, s) => acc + s.salesValue * s.quantity, 0),
+    profit: yearSales.reduce((acc, s) => acc + s.profit, 0),
+  };
+
   return {
     todaySlippersSold,
     todaySalesAmount,
@@ -576,6 +699,8 @@ export async function getDashboardSummary(): Promise<IDashboardSummary> {
     totalInventoryCost,
     totalSalesAllTime,
     totalProfitAllTime,
+    thisMonth,
+    thisYear,
     recentSales: sales.slice(0, 8),
     topArtNos,
     last7Days,

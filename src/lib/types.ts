@@ -27,6 +27,27 @@ export interface ISale {
   createdAt: string;
 }
 
+export interface ISalesFilter {
+  artNo?: string;
+  customerName?: string;
+  date?: string;
+  startDate?: string;
+  endDate?: string;
+  month?: string; // YYYY-MM
+  year?: string; // YYYY
+}
+
+export interface IPeriodSummary {
+  period: string; // e.g. "2026-11" or "2026"
+  label: string; // e.g. "Nov 2026" or "2026"
+  totalPairs: number;
+  totalRevenue: number;
+  totalCost: number;
+  totalProfit: number;
+  profitMargin: number;
+  transactionCount: number;
+}
+
 export interface IUser {
   id: string;
   username: string;
@@ -42,6 +63,16 @@ export interface IDashboardSummary {
   totalInventoryCost: number;
   totalSalesAllTime: number;
   totalProfitAllTime: number;
+  thisMonth?: {
+    pairs: number;
+    sales: number;
+    profit: number;
+  };
+  thisYear?: {
+    pairs: number;
+    sales: number;
+    profit: number;
+  };
   recentSales: ISale[];
   topArtNos: { artNo: string; soldPairs: number; totalRevenue: number; totalProfit: number }[];
   last7Days: { date: string; displayDate: string; sales: number; profit: number; pairs: number }[];

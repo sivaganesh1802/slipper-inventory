@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { Modal } from "@/components/Modal";
-import { ISale, IPurchase } from "@/lib/types";
+import { ISale, IPurchase, IPeriodSummary } from "@/lib/types";
 import {
   ShoppingCart,
   Plus,
@@ -14,26 +14,47 @@ import {
   DollarSign,
   Trash2,
   CheckCircle2,
+  BarChart3,
+  Layers,
+  ArrowRight,
+  RotateCcw,
+  Filter,
 } from "lucide-react";
 import { getTodayDateString } from "@/lib/sampleData";
 
+type FilterType = "all" | "today" | "this_month" | "this_year" | "range" | "month" | "year" | "date";
+type ActiveTab = "ledger" | "monthly" | "yearly";
+
 export default function SalesPage() {
   const [sales, setSales] = useState<ISale[]>([]);
+  const [monthlySummary, setMonthlySummary] = useState<IPeriodSummary[]>([]);
+  const [yearlySummary, setYearlySummary] = useState<IPeriodSummary[]>([]);
   const [purchases, setPurchases] = useState<IPurchase[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Active view tab: ledger, monthly, or yearly
+  const [activeTab, setActiveTab] = useState<ActiveTab>("ledger");
+
+  // Search and Filter States
   const [searchArtNo, setSearchArtNo] = useState("");
   const [searchCustomer, setSearchCustomer] = useState("");
+  const [filterType, setFilterType] = useState<FilterType>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(getTodayDateString().slice(0, 7));
+  const [selectedYear, setSelectedYear] = useState(getTodayDateString().slice(0, 4));
   const [selectedDate, setSelectedDate] = useState("");
+
+  // Modal & Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Form Fields requested by user - start clean
   const [artNo, setArtNo] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [size, setSize] = useState("");
   const [salesDate, setSalesDate] = useState(getTodayDateString());
-  const [salesValue, setSalesValue] = useState<string>("");
+  const [salesValue, setSalesValue] = useState<string>("" );
   const [quantity, setQuantity] = useState<string>("1");
   const [notes, setNotes] = useState("");
 
@@ -43,7 +64,24 @@ export default function SalesPage() {
       const queryParams = new URLSearchParams();
       if (searchArtNo.trim()) queryParams.set("artNo", searchArtNo.trim());
       if (searchCustomer.trim()) queryParams.set("customerName", searchCustomer.trim());
-      if (selectedDate) queryParams.set("date", selectedDate);
+
+      const today = getTodayDateString();
+      if (filterType === "today") {
+        queryParams.set("date", today);
+      } else if (filterType === "this_month") {
+        queryParams.set("month", today.slice(0, 7));
+      } else if (filterType === "this_year") {
+        queryParams.set("year", today.slice(0, 4));
+      } else if (filterType === "date" && selectedDate) {
+        queryParams.set("date", selectedDate);
+      } else if (filterType === "range") {
+        if (startDate) queryParams.set("startDate", startDate);
+        if (endDate) queryParams.set("endDate", endDate);
+      } else if (filterType === "month" && selectedMonth) {
+        queryParams.set("month", selectedMonth);
+      } else if (filterType === "year" && selectedYear) {
+        queryParams.set("year", selectedYear);
+      }
 
       const [salesRes, purchasesRes] = await Promise.all([
         fetch(`/api/sales?${queryParams.toString()}`),
@@ -53,8 +91,14 @@ export default function SalesPage() {
       const salesData = await salesRes.json();
       const purchasesData = await purchasesRes.json();
 
-      if (salesData.success) setSales(salesData.sales);
-      if (purchasesData.success) setPurchases(purchasesData.purchases);
+      if (salesData.success) {
+        setSales(salesData.sales || []);
+        setMonthlySummary(salesData.monthlySummary || []);
+        setYearlySummary(salesData.yearlySummary || []);
+      }
+      if (purchasesData.success) {
+        setPurchases(purchasesData.purchases || []);
+      }
     } catch (err) {
       console.error("Error fetching sales:", err);
     } finally {
@@ -64,24 +108,43 @@ export default function SalesPage() {
 
   useEffect(() => {
     fetchSalesAndStock();
-  }, [searchArtNo, searchCustomer, selectedDate]);
+  }, [
+    searchArtNo,
+    searchCustomer,
+    filterType,
+    startDate,
+    endDate,
+    selectedMonth,
+    selectedYear,
+    selectedDate,
+  ]);
 
-  const availableArtNos = Array.from(new Set(purchases.map((p) => p.artNo.toUpperCase())));
+  const availableArtNos = useMemo(
+    () => Array.from(new Set(purchases.map((p) => p.artNo.toUpperCase()))),
+    [purchases]
+  );
 
-  const availableSizes = purchases
-    .filter((p) => p.artNo.toUpperCase() === artNo.toUpperCase())
-    .map((p) => ({ size: p.size, remaining: p.remainingStock, cost: p.purchaseValue }));
+  const availableSizes = useMemo(
+    () =>
+      purchases
+        .filter((p) => p.artNo.toUpperCase() === artNo.toUpperCase())
+        .map((p) => ({ size: p.size, remaining: p.remainingStock, cost: p.purchaseValue })),
+    [purchases, artNo]
+  );
 
-  const currentPurchase = purchases.find(
-    (p) => p.artNo.toUpperCase() === artNo.toUpperCase() && p.size === size
-  ) || purchases.find((p) => p.artNo.toUpperCase() === artNo.toUpperCase());
+  const currentPurchase = useMemo(
+    () =>
+      purchases.find((p) => p.artNo.toUpperCase() === artNo.toUpperCase() && p.size === size) ||
+      purchases.find((p) => p.artNo.toUpperCase() === artNo.toUpperCase()),
+    [purchases, artNo, size]
+  );
 
   const purchaseCost = currentPurchase ? currentPurchase.purchaseValue : 0;
   const numQty = Number(quantity) || 1;
   const numSalesVal = Number(salesValue) || 0;
   const estimatedProfit = (numSalesVal - purchaseCost) * numQty;
-  const marginPercent = numSalesVal > 0 ? Math.round(((numSalesVal - purchaseCost) / numSalesVal) * 100) : 0;
-
+  const marginPercent =
+    numSalesVal > 0 ? Math.round(((numSalesVal - purchaseCost) / numSalesVal) * 100) : 0;
   const defaultSellingPrice = currentPurchase?.sellingPrice || 0;
 
   const handleOpenAddModal = () => {
@@ -113,7 +176,9 @@ export default function SalesPage() {
 
   const handleSizeChange = (newSize: string) => {
     setSize(newSize);
-    const match = purchases.find((p) => p.artNo.toUpperCase() === artNo.toUpperCase() && p.size === newSize);
+    const match = purchases.find(
+      (p) => p.artNo.toUpperCase() === artNo.toUpperCase() && p.size === newSize
+    );
     if (match && match.sellingPrice && match.sellingPrice > 0) {
       setSalesValue(String(match.sellingPrice));
     }
@@ -188,22 +253,70 @@ export default function SalesPage() {
     }
   };
 
+  const resetAllFilters = () => {
+    setFilterType("all");
+    setStartDate("");
+    setEndDate("");
+    setSelectedDate("");
+    setSearchArtNo("");
+    setSearchCustomer("");
+  };
+
+  // Drill down from monthly/yearly summary directly into ledger
+  const drillDownToMonth = (monthStr: string) => {
+    setSelectedMonth(monthStr);
+    setFilterType("month");
+    setActiveTab("ledger");
+  };
+
+  const drillDownToYear = (yearStr: string) => {
+    setSelectedYear(yearStr);
+    setFilterType("year");
+    setActiveTab("ledger");
+  };
+
   const totalRevenue = sales.reduce((acc, s) => acc + s.salesValue * s.quantity, 0);
   const totalProfit = sales.reduce((acc, s) => acc + s.profit, 0);
   const totalPairsSold = sales.reduce((acc, s) => acc + s.quantity, 0);
+
+  // Active filter label description
+  const activeFilterLabel = useMemo(() => {
+    if (filterType === "today") return `Today (${getTodayDateString()})`;
+    if (filterType === "this_month") return `This Month (${getTodayDateString().slice(0, 7)})`;
+    if (filterType === "this_year") return `This Year (${getTodayDateString().slice(0, 4)})`;
+    if (filterType === "range") {
+      if (startDate && endDate) return `Range: ${startDate} to ${endDate}`;
+      if (startDate) return `From: ${startDate}`;
+      if (endDate) return `Until: ${endDate}`;
+      return "Custom Date Range";
+    }
+    if (filterType === "month") return `Month: ${selectedMonth}`;
+    if (filterType === "year") return `Year: ${selectedYear}`;
+    if (filterType === "date" && selectedDate) return `Date: ${selectedDate}`;
+    return "All Time (All records)";
+  }, [filterType, startDate, endDate, selectedMonth, selectedYear, selectedDate]);
+
+  const currentYearNum = new Date().getFullYear();
+  const availableYears = [
+    String(currentYearNum + 1),
+    String(currentYearNum),
+    String(currentYearNum - 1),
+    String(currentYearNum - 2),
+    String(currentYearNum - 3),
+  ];
 
   return (
     <div className="animate-fade-in">
       <Header
         title="Sales Management"
-        subtitle="Record slipper customer sales, track which Art.No is sold, and realize instant profit"
+        subtitle="Track slipper transactions with full Date Range, Monthly & Yearly analytics"
       />
 
       {/* KPI Ribbon */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: "10px",
           marginBottom: "12px",
         }}
@@ -236,7 +349,7 @@ export default function SalesPage() {
           </div>
           <div style={{ minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontSize: "0.68rem", color: "#475569", fontWeight: 600, textTransform: "uppercase" }}>
-              Total Pairs Saled
+              Total Pairs Sold
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#0f172a", lineHeight: 1.1 }}>
               {totalPairsSold} <span style={{ fontSize: "0.72rem", color: "#64748b" }}>pairs</span>
@@ -316,14 +429,61 @@ export default function SalesPage() {
             </div>
           </div>
         </div>
+
+        <div
+          className="glass-card"
+          style={{
+            padding: "8px 12px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            borderLeft: "3px solid #d97706",
+            whiteSpace: "nowrap",
+            backgroundColor: "#fffbeb",
+          }}
+        >
+          <div
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "4px",
+              backgroundColor: "#fef3c7",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#d97706",
+              flexShrink: 0,
+            }}
+          >
+            <Filter size={14} />
+          </div>
+          <div style={{ minWidth: 0, overflow: "hidden" }}>
+            <div style={{ fontSize: "0.68rem", color: "#92400e", fontWeight: 600, textTransform: "uppercase" }}>
+              Active Period
+            </div>
+            <div
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: 700,
+                color: "#78350f",
+                lineHeight: 1.2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={activeFilterLabel}
+            >
+              {activeFilterLabel}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Action Bar & Filters */}
+      {/* Primary Action Bar & Search Inputs */}
       <div
         className="glass-card"
         style={{
           padding: "10px 14px",
-          marginBottom: "14px",
+          marginBottom: "10px",
           display: "flex",
           alignItems: "center",
           gap: "10px",
@@ -340,7 +500,7 @@ export default function SalesPage() {
           <span>Record Sale</span>
         </button>
 
-        <div style={{ flex: "1 1 160px", position: "relative", minWidth: "130px" }}>
+        <div style={{ flex: "1 1 180px", position: "relative", minWidth: "140px" }}>
           <Search
             size={14}
             style={{
@@ -361,7 +521,7 @@ export default function SalesPage() {
           />
         </div>
 
-        <div style={{ flex: "1 1 180px", position: "relative", minWidth: "140px" }}>
+        <div style={{ flex: "1 1 200px", position: "relative", minWidth: "150px" }}>
           <Search
             size={14}
             style={{
@@ -382,116 +542,739 @@ export default function SalesPage() {
           />
         </div>
 
-        <input
-          type="date"
-          className="input-field"
-          style={{ width: "auto", minWidth: "130px", flexShrink: 0 }}
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        />
-        {selectedDate && (
+        {(searchArtNo || searchCustomer || filterType !== "all") && (
           <button
-            onClick={() => setSelectedDate("")}
+            onClick={resetAllFilters}
             className="btn btn-secondary btn-sm"
-            style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+            style={{ flexShrink: 0, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}
+            title="Reset all search and date filters"
           >
-            Clear Date
+            <RotateCcw size={13} />
+            <span>Reset Filters</span>
           </button>
         )}
       </div>
 
-      {/* Sales Ledger Table */}
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Art.No</th>
-              <th>Customer Name</th>
-              <th>Size</th>
-              <th>Qty</th>
-              <th>Sales Value</th>
-              <th>Cost Price</th>
-              <th>Net Profit</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+      {/* Date Range & Period Filter Bar */}
+      <div
+        className="glass-card"
+        style={{
+          padding: "8px 12px",
+          marginBottom: "14px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          flexWrap: "wrap",
+          background: "#faf9f6",
+        }}
+      >
+        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", marginRight: "4px" }}>
+          Filter By:
+        </span>
+
+        {/* Quick Filter Buttons */}
+        <div style={{ display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className={`filter-chip-tab ${filterType === "all" ? "is-active" : ""}`}
+            onClick={() => setFilterType("all")}
+          >
+            All Time
+          </button>
+          <button
+            type="button"
+            className={`filter-chip-tab ${filterType === "today" ? "is-active" : ""}`}
+            onClick={() => setFilterType("today")}
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            className={`filter-chip-tab ${filterType === "this_month" ? "is-active" : ""}`}
+            onClick={() => setFilterType("this_month")}
+          >
+            This Month
+          </button>
+          <button
+            type="button"
+            className={`filter-chip-tab ${filterType === "this_year" ? "is-active" : ""}`}
+            onClick={() => setFilterType("this_year")}
+          >
+            This Year
+          </button>
+          <button
+            type="button"
+            className={`filter-chip-tab ${filterType === "range" ? "is-active" : ""}`}
+            onClick={() => setFilterType("range")}
+          >
+            📅 Date Range
+          </button>
+          <button
+            type="button"
+            className={`filter-chip-tab ${filterType === "month" ? "is-active" : ""}`}
+            onClick={() => setFilterType("month")}
+          >
+            📆 By Month
+          </button>
+          <button
+            type="button"
+            className={`filter-chip-tab ${filterType === "year" ? "is-active" : ""}`}
+            onClick={() => setFilterType("year")}
+          >
+            📈 By Year
+          </button>
+          <button
+            type="button"
+            className={`filter-chip-tab ${filterType === "date" ? "is-active" : ""}`}
+            onClick={() => setFilterType("date")}
+          >
+            Specific Date
+          </button>
+        </div>
+
+        {/* Dynamic Controls based on selected filter type */}
+        {filterType === "range" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginLeft: "auto",
+              flexWrap: "wrap",
+              background: "#ffffff",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              border: "1px solid #e2e8f0",
+            }}
+          >
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b" }}>From:</span>
+            <input
+              type="date"
+              className="input-field"
+              style={{ width: "135px", padding: "4px 6px", fontSize: "0.75rem" }}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b" }}>To:</span>
+            <input
+              type="date"
+              className="input-field"
+              style={{ width: "135px", padding: "4px 6px", fontSize: "0.75rem" }}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+            {(startDate || endDate) && (
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="btn btn-secondary btn-sm"
+                style={{ padding: "3px 7px", fontSize: "0.7rem" }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
+        {filterType === "month" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginLeft: "auto",
+              background: "#ffffff",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              border: "1px solid #e2e8f0",
+            }}
+          >
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b" }}>Select Month:</span>
+            <input
+              type="month"
+              className="input-field"
+              style={{ width: "150px", padding: "4px 6px", fontSize: "0.75rem" }}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            />
+          </div>
+        )}
+
+        {filterType === "year" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginLeft: "auto",
+              background: "#ffffff",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              border: "1px solid #e2e8f0",
+            }}
+          >
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b" }}>Select Year:</span>
+            <select
+              className="input-field"
+              style={{ width: "110px", padding: "4px 6px", fontSize: "0.75rem" }}
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+            >
+              {availableYears.map((yr) => (
+                <option key={yr} value={yr}>
+                  {yr}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {filterType === "date" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginLeft: "auto",
+              background: "#ffffff",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              border: "1px solid #e2e8f0",
+            }}
+          >
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b" }}>Pick Date:</span>
+            <input
+              type="date"
+              className="input-field"
+              style={{ width: "135px", padding: "4px 6px", fontSize: "0.75rem" }}
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+            {selectedDate && (
+              <button
+                onClick={() => setSelectedDate("")}
+                className="btn btn-secondary btn-sm"
+                style={{ padding: "3px 7px", fontSize: "0.7rem" }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Main View Tabs (Ledger, Monthly Breakdown, Yearly Breakdown) */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          marginBottom: "12px",
+          borderBottom: "2px solid #e2e8f0",
+          paddingBottom: "4px",
+        }}
+      >
+        <button
+          onClick={() => setActiveTab("ledger")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "8px 14px",
+            fontSize: "0.82rem",
+            fontWeight: 700,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            borderBottom: activeTab === "ledger" ? "3px solid #0f172a" : "3px solid transparent",
+            color: activeTab === "ledger" ? "#0f172a" : "#64748b",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <Layers size={15} />
+          <span>Detailed Ledger</span>
+          <span
+            style={{
+              fontSize: "0.68rem",
+              padding: "2px 6px",
+              borderRadius: "999px",
+              backgroundColor: activeTab === "ledger" ? "#0f172a" : "#e2e8f0",
+              color: activeTab === "ledger" ? "#ffffff" : "#475569",
+            }}
+          >
+            {sales.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("monthly")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "8px 14px",
+            fontSize: "0.82rem",
+            fontWeight: 700,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            borderBottom: activeTab === "monthly" ? "3px solid #0f172a" : "3px solid transparent",
+            color: activeTab === "monthly" ? "#0f172a" : "#64748b",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <Calendar size={15} />
+          <span>Monthly Breakdown</span>
+          <span
+            style={{
+              fontSize: "0.68rem",
+              padding: "2px 6px",
+              borderRadius: "999px",
+              backgroundColor: activeTab === "monthly" ? "#0f172a" : "#e2e8f0",
+              color: activeTab === "monthly" ? "#ffffff" : "#475569",
+            }}
+          >
+            {monthlySummary.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("yearly")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "8px 14px",
+            fontSize: "0.82rem",
+            fontWeight: 700,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            borderBottom: activeTab === "yearly" ? "3px solid #0f172a" : "3px solid transparent",
+            color: activeTab === "yearly" ? "#0f172a" : "#64748b",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <BarChart3 size={15} />
+          <span>Yearly Breakdown</span>
+          <span
+            style={{
+              fontSize: "0.68rem",
+              padding: "2px 6px",
+              borderRadius: "999px",
+              backgroundColor: activeTab === "yearly" ? "#0f172a" : "#e2e8f0",
+              color: activeTab === "yearly" ? "#ffffff" : "#475569",
+            }}
+          >
+            {yearlySummary.length}
+          </span>
+        </button>
+      </div>
+
+      {/* TAB 1: DETAILED SALES LEDGER */}
+      {activeTab === "ledger" && (
+        <div className="table-container">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={9} style={{ textAlign: "center", padding: "24px", color: "#475569", fontWeight: 600 }}>
-                  Loading sales from database...
-                </td>
+                <th>Date</th>
+                <th>Art.No</th>
+                <th>Customer Name</th>
+                <th>Size</th>
+                <th>Qty</th>
+                <th>Sales Value</th>
+                <th>Cost Price</th>
+                <th>Net Profit</th>
+                <th>Actions</th>
               </tr>
-            ) : sales.length === 0 ? (
-              <tr>
-                <td colSpan={9} style={{ textAlign: "center", padding: "24px", color: "#475569", fontWeight: 600 }}>
-                  No sales recorded. Click &quot;+ Record Sale&quot; to add one!
-                </td>
-              </tr>
-            ) : (
-              sales.map((sale) => (
-                <tr key={sale._id}>
-                  <td style={{ color: "#0f172a", fontWeight: 600 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Calendar size={12} style={{ color: "#64748b" }} />
-                      <span>{sale.salesDate}</span>
-                    </div>
-                  </td>
-
-                  <td>
-                    <span className="badge badge-cyan">{sale.artNo}</span>
-                  </td>
-
-                  <td>
-                    <span style={{ fontWeight: 700, color: "#0f172a" }}>{sale.customerName}</span>
-                    {sale.notes && (
-                      <span style={{ fontSize: "0.7rem", color: "#475569", marginLeft: "6px" }}>
-                        ({sale.notes})
-                      </span>
-                    )}
-                  </td>
-
-                  <td>
-                    <span style={{ padding: "2px 7px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "4px", fontWeight: 800, color: "#0f172a" }}>
-                      {sale.size}
-                    </span>
-                  </td>
-
-                  <td style={{ fontWeight: 700, color: "#0f172a" }}>{sale.quantity} pair{sale.quantity > 1 ? "s" : ""}</td>
-
-                  <td>
-                    <span style={{ fontWeight: 800, color: "#0f172a" }}>
-                      ₹{sale.salesValue * sale.quantity}
-                    </span>
-                  </td>
-
-                  <td style={{ color: "#475569", fontWeight: 600 }}>
-                    ₹{sale.purchaseValue * sale.quantity}
-                  </td>
-
-                  <td>
-                    <span className="badge badge-emerald">
-                      +₹{sale.profit}
-                    </span>
-                  </td>
-
-                  <td>
-                    <button
-                      onClick={() => handleDelete(sale._id, sale.customerName)}
-                      title="Delete sale"
-                      className="btn btn-danger btn-sm"
-                      style={{ padding: "3px 6px" }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: "center", padding: "24px", color: "#475569", fontWeight: 600 }}>
+                    Loading sales records...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : sales.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: "center", padding: "24px", color: "#475569", fontWeight: 600 }}>
+                    No sales found for the selected filter. Click &quot;+ Record Sale&quot; or reset your filters!
+                  </td>
+                </tr>
+              ) : (
+                sales.map((sale) => (
+                  <tr key={sale._id}>
+                    <td style={{ color: "#0f172a", fontWeight: 600 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <Calendar size={12} style={{ color: "#64748b" }} />
+                        <span>{sale.salesDate}</span>
+                      </div>
+                    </td>
+
+                    <td>
+                      <span className="badge badge-cyan">{sale.artNo}</span>
+                    </td>
+
+                    <td>
+                      <span style={{ fontWeight: 700, color: "#0f172a" }}>{sale.customerName}</span>
+                      {sale.notes && (
+                        <span style={{ fontSize: "0.7rem", color: "#475569", marginLeft: "6px" }}>
+                          ({sale.notes})
+                        </span>
+                      )}
+                    </td>
+
+                    <td>
+                      <span
+                        style={{
+                          padding: "2px 7px",
+                          background: "#f1f5f9",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "4px",
+                          fontWeight: 800,
+                          color: "#0f172a",
+                        }}
+                      >
+                        {sale.size}
+                      </span>
+                    </td>
+
+                    <td style={{ fontWeight: 700, color: "#0f172a" }}>
+                      {sale.quantity} pair{sale.quantity > 1 ? "s" : ""}
+                    </td>
+
+                    <td>
+                      <span style={{ fontWeight: 800, color: "#0f172a" }}>
+                        ₹{sale.salesValue * sale.quantity}
+                      </span>
+                    </td>
+
+                    <td style={{ color: "#475569", fontWeight: 600 }}>
+                      ₹{sale.purchaseValue * sale.quantity}
+                    </td>
+
+                    <td>
+                      <span className="badge badge-emerald">+₹{sale.profit}</span>
+                    </td>
+
+                    <td>
+                      <button
+                        onClick={() => handleDelete(sale._id, sale.customerName)}
+                        title="Delete sale"
+                        className="btn btn-danger btn-sm"
+                        style={{ padding: "3px 6px" }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* TAB 2: MONTHLY BREAKDOWN */}
+      {activeTab === "monthly" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          {/* Monthly Summary Cards Grid */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+              gap: "12px",
+            }}
+          >
+            {monthlySummary.map((m) => (
+              <div
+                key={m.period}
+                className="glass-card"
+                style={{
+                  padding: "12px 14px",
+                  borderTop: "3px solid #0284c7",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
+                    {m.label}
+                  </div>
+                  <span className="badge badge-cyan" style={{ fontSize: "0.68rem" }}>
+                    {m.transactionCount} sale{m.transactionCount > 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginTop: "4px" }}>
+                  <div>
+                    <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Pairs Sold</div>
+                    <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>
+                      {m.totalPairs} pairs
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Turnover</div>
+                    <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0284c7" }}>
+                      ₹{m.totalRevenue.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: "6px",
+                    paddingTop: "6px",
+                    borderTop: "1px solid #f1f5f9",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "0.68rem", color: "#059669", fontWeight: 700 }}>
+                      Profit: +₹{m.totalProfit.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: "0.66rem", color: "#64748b" }}>Margin: {m.profitMargin}%</div>
+                  </div>
+                  <button
+                    onClick={() => drillDownToMonth(m.period)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: "3px 7px", fontSize: "0.72rem", display: "flex", alignItems: "center", gap: "3px" }}
+                    title="View all transactions in this month"
+                  >
+                    <span>View Ledger</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Monthly Detailed Summary Table */}
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Orders Count</th>
+                  <th>Pairs Sold</th>
+                  <th>Turnover (Revenue)</th>
+                  <th>Total Cost</th>
+                  <th>Net Profit</th>
+                  <th>Profit Margin</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: "center", padding: "20px" }}>
+                      Calculating monthly data...
+                    </td>
+                  </tr>
+                ) : monthlySummary.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: "center", padding: "20px", color: "#64748b" }}>
+                      No monthly records available for the selected period.
+                    </td>
+                  </tr>
+                ) : (
+                  monthlySummary.map((m) => (
+                    <tr key={m.period}>
+                      <td>
+                        <div style={{ fontWeight: 800, color: "#0f172a" }}>{m.label}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#64748b" }}>{m.period}</div>
+                      </td>
+                      <td style={{ fontWeight: 700, color: "#0f172a" }}>{m.transactionCount}</td>
+                      <td style={{ fontWeight: 800, color: "#0f172a" }}>{m.totalPairs} pairs</td>
+                      <td style={{ fontWeight: 800, color: "#0284c7" }}>₹{m.totalRevenue.toLocaleString()}</td>
+                      <td style={{ color: "#64748b", fontWeight: 600 }}>₹{m.totalCost.toLocaleString()}</td>
+                      <td>
+                        <span className="badge badge-emerald">+₹{m.totalProfit.toLocaleString()}</span>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            backgroundColor: m.profitMargin >= 30 ? "#dcfce7" : "#fef3c7",
+                            color: m.profitMargin >= 30 ? "#15803d" : "#b45309",
+                          }}
+                        >
+                          {m.profitMargin}%
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => drillDownToMonth(m.period)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: "3px 8px", fontSize: "0.72rem" }}
+                        >
+                          Filter Month
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: YEARLY BREAKDOWN */}
+      {activeTab === "yearly" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          {/* Yearly Summary Cards Grid */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gap: "12px",
+            }}
+          >
+            {yearlySummary.map((y) => (
+              <div
+                key={y.period}
+                className="glass-card"
+                style={{
+                  padding: "14px 16px",
+                  borderTop: "3px solid #059669",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+                    Year {y.label}
+                  </div>
+                  <span className="badge badge-emerald" style={{ fontSize: "0.7rem" }}>
+                    {y.transactionCount} transactions
+                  </span>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "6px" }}>
+                  <div>
+                    <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Total Pairs</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0f172a" }}>
+                      {y.totalPairs}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>Annual Revenue</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0284c7" }}>
+                      ₹{y.totalRevenue.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: "8px",
+                    paddingTop: "8px",
+                    borderTop: "1px solid #f1f5f9",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "0.78rem", color: "#059669", fontWeight: 800 }}>
+                      Annual Profit: +₹{y.totalProfit.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Margin: {y.profitMargin}%</div>
+                  </div>
+                  <button
+                    onClick={() => drillDownToYear(y.period)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: "4px 8px", fontSize: "0.72rem", display: "flex", alignItems: "center", gap: "3px" }}
+                    title="View all transactions in this year"
+                  >
+                    <span>View Ledger</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Yearly Detailed Table */}
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Orders Count</th>
+                  <th>Pairs Sold</th>
+                  <th>Turnover (Revenue)</th>
+                  <th>Total Cost</th>
+                  <th>Net Profit</th>
+                  <th>Profit Margin</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: "center", padding: "20px" }}>
+                      Calculating annual data...
+                    </td>
+                  </tr>
+                ) : yearlySummary.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: "center", padding: "20px", color: "#64748b" }}>
+                      No yearly records available.
+                    </td>
+                  </tr>
+                ) : (
+                  yearlySummary.map((y) => (
+                    <tr key={y.period}>
+                      <td style={{ fontWeight: 800, fontSize: "0.95rem", color: "#0f172a" }}>{y.period}</td>
+                      <td style={{ fontWeight: 700, color: "#0f172a" }}>{y.transactionCount}</td>
+                      <td style={{ fontWeight: 800, color: "#0f172a" }}>{y.totalPairs} pairs</td>
+                      <td style={{ fontWeight: 800, color: "#0284c7" }}>₹{y.totalRevenue.toLocaleString()}</td>
+                      <td style={{ color: "#64748b", fontWeight: 600 }}>₹{y.totalCost.toLocaleString()}</td>
+                      <td>
+                        <span className="badge badge-emerald">+₹{y.totalProfit.toLocaleString()}</span>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            backgroundColor: y.profitMargin >= 30 ? "#dcfce7" : "#fef3c7",
+                            color: y.profitMargin >= 30 ? "#15803d" : "#b45309",
+                          }}
+                        >
+                          {y.profitMargin}%
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => drillDownToYear(y.period)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: "3px 8px", fontSize: "0.72rem" }}
+                        >
+                          Filter Year
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Record Sale Modal */}
       <Modal
@@ -523,7 +1306,7 @@ export default function SalesPage() {
         <form onSubmit={handleFormSubmit}>
           <div className="input-group">
             <label className="input-label" htmlFor="artNoSelect">
-              Which Art.No is Saled? *
+              Which Art.No is Sold? *
             </label>
             <div style={{ display: "flex", gap: "6px" }}>
               <select
@@ -614,7 +1397,14 @@ export default function SalesPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             <div className="input-group">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "3px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "3px",
+                }}
+              >
                 <label className="input-label" htmlFor="salesValue" style={{ marginBottom: 0 }}>
                   Selling Price (₹) *
                 </label>
